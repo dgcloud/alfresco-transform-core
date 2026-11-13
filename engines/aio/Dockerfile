@@ -17,11 +17,12 @@ ARG IMAGEMAGICK_VERSION=7.1.2-13-ci-1
 ENV IMAGEMAGICK_RPM_URL=https://nexus.alfresco.com/nexus/service/local/repositories/thirdparty/org/imagemagick/imagemagick-distribution/${IMAGEMAGICK_VERSION}/imagemagick-distribution-${IMAGEMAGICK_VERSION}
 ENV IMAGEMAGICK_DEP_RPM_URL=https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
 
-ARG LIBREOFFICE_VERSION=7.2.5
-ENV LIBREOFFICE_RPM_URL=https://nexus.alfresco.com/nexus/service/local/repositories/thirdparty/org/libreoffice/libreoffice-dist/${LIBREOFFICE_VERSION}/libreoffice-dist-${LIBREOFFICE_VERSION}-linux.gz
-ENV LIBREOFFICE_ARM64_RPM_URL=https://dl.rockylinux.org/pub/rocky/9/devel/aarch64/os/Packages/l/
-ENV LIBREOFFICE_ARM64_RPM_VERSION=libreoffice-7.1.8.1
-ARG PDF_RENDERER_VERSION=1.3.0-85
+ARG LIBREOFFICE_VERSION=26.8.3
+ENV LIBREOFFICE_RPM_URL=https://download.documentfoundation.org/libreoffice/stable/26.8.3/rpm/x86_64/LibreOffice_26.8.3_Linux_x86-64_rpm.tar.gz
+ENV LIBREOFFICE_LANGPACK_URL=https://download.documentfoundation.org/libreoffice/stable/26.8.3/rpm/x86_64/LibreOffice_26.8.3_Linux_x86-64_rpm_langpack_pt-BR.tar.gz
+ENV LIBREOFFICE_ARM64_RPM_URL=https://download.documentfoundation.org/libreoffice/stable/26.8.3/rpm/aarch64/LibreOffice_26.8.3_Linux_aarch64_rpm.tar.gz
+ENV LIBREOFFICE_ARM64_LANGPACK_URL=https://download.documentfoundation.org/libreoffice/stable/26.8.3/rpm/aarch64/LibreOffice_26.8.3_Linux_aarch64_rpm_langpack_pt-BR.tar.gz
+ARG PDF_RENDERER_VERSION=1.3.0-86
 ENV ALFRESCO_PDF_RENDERER_LIB_RPM_URL=https://nexus.alfresco.com/nexus/service/local/repositories/releases/org/alfresco/alfresco-pdf-renderer/${PDF_RENDERER_VERSION}/alfresco-pdf-renderer-${PDF_RENDERER_VERSION}-linux.tgz
 ENV ALFRESCO_PDF_RENDERER_ARM64_LIB_RPM_URL=https://nexus.alfresco.com/nexus/service/local/repositories/releases/org/alfresco/alfresco-pdf-renderer/${PDF_RENDERER_VERSION}/alfresco-pdf-renderer-${PDF_RENDERER_VERSION}-linux-arm.tgz
 
@@ -45,15 +46,23 @@ RUN ln /usr/bin/${env.project_artifactId}-${env.project_version}.jar /usr/bin/${
     fi && \
     yum install -y cairo cups-libs libSM libGLU procps && \
     if [ "$(uname -m)" = "x86_64" ]; then \
-      test -f libreoffice-dist-${LIBREOFFICE_VERSION}-linux.gz && \
-      ln -s libreoffice-dist-${LIBREOFFICE_VERSION}-linux.gz libreoffice-dist-linux.gz || \
-      curl -s -S $LIBREOFFICE_RPM_URL      -o libreoffice-dist-linux.gz && \
-      tar xzf libreoffice-dist-linux.gz && \
+      curl -fL -o libreoffice-dist.tar.gz "$LIBREOFFICE_RPM_URL" && \
+      tar xzf libreoffice-dist.tar.gz && \
       yum localinstall -y LibreOffice*/RPMS/*.rpm && \
-      rm -rf libreoffice-dist-*linux.gz LibreOffice_*_Linux_x86-64_rpm; \
+      rm -rf libreoffice-dist.tar.gz LibreOffice_*_Linux_x86-64_rpm && \
+      curl -fL -o libreoffice-langpack.tar.gz "$LIBREOFFICE_LANGPACK_URL" && \
+      tar xzf libreoffice-langpack.tar.gz && \
+      yum localinstall -y LibreOffice*_langpack_*/RPMS/*.rpm && \
+      rm -rf libreoffice-langpack.tar.gz LibreOffice*_langpack_*; \
     else \
-      LIBREOFFICE_ARM64_RPM_VERSION=$(curl -s $LIBREOFFICE_ARM64_RPM_URL | grep -o "${LIBREOFFICE_ARM64_RPM_VERSION}.*" | cut -d '"' -f 1 | sort | tail -n1) && \
-      dnf --enablerepo=devel install -y ${LIBREOFFICE_ARM64_RPM_URL}${LIBREOFFICE_ARM64_RPM_VERSION} && \
+      curl -fL -o libreoffice-dist.tar.gz "$LIBREOFFICE_ARM64_RPM_URL" && \
+      tar xzf libreoffice-dist.tar.gz && \
+      yum localinstall -y LibreOffice*/RPMS/*.rpm && \
+      rm -rf libreoffice-dist.tar.gz LibreOffice_*_Linux_aarch64_rpm && \
+      curl -fL -o libreoffice-langpack.tar.gz "$LIBREOFFICE_ARM64_LANGPACK_URL" && \
+      tar xzf libreoffice-langpack.tar.gz && \
+      yum localinstall -y LibreOffice*_langpack_*/RPMS/*.rpm && \
+      rm -rf libreoffice-langpack.tar.gz LibreOffice*_langpack_* && \
       update-alternatives --set java java-17-openjdk.aarch64; \
     fi && \
     if [ "$(uname -m)" = "x86_64" ]; then \
